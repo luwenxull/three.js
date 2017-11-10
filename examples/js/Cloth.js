@@ -11,7 +11,7 @@
 // Real-time Cloth Animation http://www.darwin3d.com/gamedev/articles/col0599.pdf
 
 var DAMPING = 0.03;
-var DRAG = 1 - DAMPING;
+var DRAG = 1 - DAMPING; // 阻力
 var MASS = 0.1;
 var restDistance = 25;
 
@@ -59,11 +59,14 @@ function plane( width, height ) {
 }
 
 function Particle( x, y, z, mass ) {
-
+  /**
+   * 对应parametricGeometry
+   * 每个particle对应clothGeometry的vertex
+   */
 	this.position = clothFunction( x, y ); // position
 	this.previous = clothFunction( x, y ); // previous
 	this.original = clothFunction( x, y );
-	this.a = new THREE.Vector3( 0, 0, 0 ); // acceleration
+	this.a = new THREE.Vector3( 0, 0, 0 ); // 加速度
 	this.mass = mass;
 	this.invMass = 1 / mass;
 	this.tmp = new THREE.Vector3();
@@ -85,9 +88,10 @@ Particle.prototype.addForce = function( force ) {
 // Performs Verlet integration
 
 Particle.prototype.integrate = function( timesq ) {
-
-	var newPos = this.tmp.subVectors( this.position, this.previous );
-	newPos.multiplyScalar( DRAG ).add( this.position );
+	var newPos = this.tmp.subVectors( this.position, this.previous /* 由之前的位置指向当前位置 */ );
+	// 修正当前位置
+	newPos.multiplyScalar( DRAG/* 阻力 */ ).add( this.position );
+	// 计算加速度
 	newPos.add( this.a.multiplyScalar( timesq ) );
 
 	this.tmp = this.previous;
@@ -126,15 +130,16 @@ function Cloth( w, h ) {
 
 	var u, v;
 
+	var particleIndex = 0
 	// Create particles
 	for ( v = 0; v <= h; v ++ ) {
 
 		for ( u = 0; u <= w; u ++ ) {
+			var p = new Particle( u / w, v / h, 0, MASS )
+			p.__index = particleIndex // 手动设置追踪index
+			particles.push(p);
 
-			particles.push(
-				new Particle( u / w, v / h, 0, MASS )
-			);
-
+			particleIndex ++
 		}
 
 	}
@@ -243,10 +248,11 @@ function simulate( time ) {
 
 		for ( i = 0, il = faces.length; i < il; i ++ ) {
 
-			face = faces[ i ];
-			normal = face.normal;
+			face = faces[ i ]; // 面
+			normal = face.normal; // 法向量
 
-			tmpForce.copy( normal ).normalize().multiplyScalar( normal.dot( windForce ) );
+			tmpForce.copy( normal ).normalize().multiplyScalar( normal.dot( windForce )/* 风力在法向量方向上的大小 */ );
+			// 给每个面的三个顶点施加力
 			particles[ face.a ].addForce( tmpForce );
 			particles[ face.b ].addForce( tmpForce );
 			particles[ face.c ].addForce( tmpForce );
@@ -258,7 +264,7 @@ function simulate( time ) {
 	for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
 
 		particle = particles[ i ];
-		particle.addForce( gravity );
+		particle.addForce( gravity ); // 添加重力
 
 		particle.integrate( TIMESTEP_SQ );
 

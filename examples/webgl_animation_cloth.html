@@ -135,7 +135,7 @@
 				clothTexture.anisotropy = 16;
 
 				var clothMaterial = new THREE.MeshLambertMaterial( {
-					map: clothTexture,
+					// map: clothTexture,
 					side: THREE.DoubleSide,
 					alphaTest: 0.5
 				} );
@@ -143,7 +143,7 @@
 				// cloth geometry
 
 				clothGeometry = new THREE.ParametricGeometry( clothFunction, cloth.w, cloth.h );
-
+				window.closeGeometry = clothGeometry
 				// cloth mesh
 
 				object = new THREE.Mesh( clothGeometry, clothMaterial );
@@ -273,11 +273,11 @@
 
 			function animate() {
 
-				requestAnimationFrame( animate );
+				// requestAnimationFrame( animate );
 
 				var time = Date.now();
 
-				var windStrength = Math.cos( time / 7000 ) * 20 + 40;
+				var windStrength = Math.cos( time / 7000 ) * 20 + 40; // 风力大小
 
 				windForce.set( Math.sin( time / 2000 ), Math.cos( time / 3000 ), Math.sin( time / 1000 ) )
 				windForce.normalize()
