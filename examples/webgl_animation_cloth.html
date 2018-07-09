@@ -97,6 +97,9 @@
 				scene.background = new THREE.Color( 0xcce0ff );
 				scene.fog = new THREE.Fog( 0xcce0ff, 500, 10000 );
 
+        var axesHelper = new THREE.AxesHelper( 100 );
+        scene.add( axesHelper );
+
 				// camera
 
 				camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 10000 );
@@ -186,7 +189,7 @@
 
 				// poles
 
-				var poleGeo = new THREE.BoxBufferGeometry( 5, 375, 5 );
+				var poleGeo = new THREE.BoxBufferGeometry( 5, 375, 5 ); // width, height, depth
 				var poleMat = new THREE.MeshLambertMaterial();
 
 				var mesh = new THREE.Mesh( poleGeo, poleMat );
@@ -276,10 +279,13 @@
 
 				var time = Date.now();
 
-				var windStrength = Math.cos( time / 7000 ) * 20 + 40;
+				var windStrength = Math.cos( time / 7000 ) * 20 + 40; // 随机风力
 
+				// 随机风向
 				windForce.set( Math.sin( time / 2000 ), Math.cos( time / 3000 ), Math.sin( time / 1000 ) )
+        // 归一化
 				windForce.normalize()
+        // 风力
 				windForce.multiplyScalar( windStrength );
 
 				simulate( time );

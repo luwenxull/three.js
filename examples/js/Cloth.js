@@ -11,7 +11,7 @@
 // Real-time Cloth Animation http://www.darwin3d.com/gamedev/articles/col0599.pdf
 
 var DAMPING = 0.03;
-var DRAG = 1 - DAMPING;
+var DRAG = 1 - DAMPING; // 阻尼
 var MASS = 0.1;
 var restDistance = 25;
 
@@ -23,6 +23,7 @@ var clothFunction = plane( restDistance * xSegs, restDistance * ySegs );
 var cloth = new Cloth( xSegs, ySegs );
 
 var GRAVITY = 981 * 1.4;
+// 重力
 var gravity = new THREE.Vector3( 0, - GRAVITY, 0 ).multiplyScalar( MASS );
 
 
@@ -33,8 +34,8 @@ var pins = [];
 
 
 var wind = true;
-var windStrength = 2;
-var windForce = new THREE.Vector3( 0, 0, 0 );
+var windStrength = 2; // 风力
+var windForce = new THREE.Vector3( 0, 0, 0 ); // 风
 
 var ballPosition = new THREE.Vector3( 0, - 45, 0 );
 var ballSize = 60; //40
@@ -47,6 +48,11 @@ var lastTime;
 function plane( width, height ) {
 
 	return function ( u, v, target ) {
+  /**
+   * clothFunction
+   * 用来生成衣物对应的geometry(parametricGeometry)
+   * u,v范围: [0, 1]
+   */
 
 		var x = ( u - 0.5 ) * width;
 		var y = ( v + 0.5 ) * height;
@@ -58,6 +64,15 @@ function plane( width, height ) {
 
 }
 
+/**
+ * 衣服粒子
+ * 每个粒子对应geometry的vector
+ * @param x
+ * @param y
+ * @param z
+ * @param mass 质量
+ * @constructor
+ */
 function Particle( x, y, z, mass ) {
 
 	this.position = new THREE.Vector3();
@@ -66,8 +81,8 @@ function Particle( x, y, z, mass ) {
 	this.a = new THREE.Vector3( 0, 0, 0 ); // acceleration
 	this.mass = mass;
 	this.invMass = 1 / mass;
-	this.tmp = new THREE.Vector3();
-	this.tmp2 = new THREE.Vector3();
+	this.tmp = new THREE.Vector3(); // 位置
+	this.tmp2 = new THREE.Vector3(); // 加速度
 
 	// init
 
@@ -79,6 +94,7 @@ function Particle( x, y, z, mass ) {
 
 // Force -> Acceleration
 
+// 力转成加速度
 Particle.prototype.addForce = function ( force ) {
 
 	this.a.add(
@@ -92,15 +108,15 @@ Particle.prototype.addForce = function ( force ) {
 
 Particle.prototype.integrate = function ( timesq ) {
 
-	var newPos = this.tmp.subVectors( this.position, this.previous );
-	newPos.multiplyScalar( DRAG ).add( this.position );
+	var newPos = this.tmp.subVectors( this.position, this.previous ); // 上一帧的位置指向当前位置
+	newPos.multiplyScalar( DRAG ).add( this.position ); // 计算惯性与阻尼的影响
 	newPos.add( this.a.multiplyScalar( timesq ) );
 
 	this.tmp = this.previous;
 	this.previous = this.position;
 	this.position = newPos;
 
-	this.a.set( 0, 0, 0 );
+	this.a.set( 0, 0, 0 ); // 加速度归零
 
 };
 
@@ -109,7 +125,7 @@ var diff = new THREE.Vector3();
 
 function satisfyConstraints( p1, p2, distance ) {
 
-	diff.subVectors( p2.position, p1.position );
+	diff.subVectors( p2.position, p1.position ); // p1指向p2
 	var currentDist = diff.length();
 	if ( currentDist === 0 ) return; // prevents division by 0
 	var correction = diff.multiplyScalar( 1 - distance / currentDist );
@@ -133,6 +149,9 @@ function Cloth( w, h ) {
 	var u, v;
 
 	// Create particles
+  // 注意！
+	// 行和列都分成了10份，所以每行或每列的个数是11
+	// 后续构建约束的时候需要注意
 	for ( v = 0; v <= h; v ++ ) {
 
 		for ( u = 0; u <= w; u ++ ) {
@@ -146,20 +165,20 @@ function Cloth( w, h ) {
 	}
 
 	// Structural
-
+	// 约束
 	for ( v = 0; v < h; v ++ ) {
 
 		for ( u = 0; u < w; u ++ ) {
 
 			constraints.push( [
 				particles[ index( u, v ) ],
-				particles[ index( u, v + 1 ) ],
+				particles[ index( u, v + 1 ) ], // 下
 				restDistance
 			] );
 
 			constraints.push( [
 				particles[ index( u, v ) ],
-				particles[ index( u + 1, v ) ],
+				particles[ index( u + 1, v ) ], // 右
 				restDistance
 			] );
 
@@ -167,6 +186,7 @@ function Cloth( w, h ) {
 
 	}
 
+	// 边界的特殊处理
 	for ( u = w, v = 0; v < h; v ++ ) {
 
 		constraints.push( [
@@ -218,9 +238,15 @@ function Cloth( w, h ) {
 	this.particles = particles;
 	this.constraints = constraints;
 
+  /**
+   *
+   * @param u
+   * @param v
+   * @return {*}
+   */
 	function index( u, v ) {
 
-		return u + v * ( w + 1 );
+		return u + v * ( w + 1 ); // 分割成w端，所以每行有w+1个粒子
 
 	}
 
@@ -252,7 +278,7 @@ function simulate( time ) {
 			face = faces[ i ];
 			normal = face.normal;
 
-			tmpForce.copy( normal ).normalize().multiplyScalar( normal.dot( windForce ) );
+			tmpForce.copy( normal ).normalize().multiplyScalar( normal.dot( windForce ) /* 风向分量 */ );
 			particles[ face.a ].addForce( tmpForce );
 			particles[ face.b ].addForce( tmpForce );
 			particles[ face.c ].addForce( tmpForce );
@@ -264,7 +290,7 @@ function simulate( time ) {
 	for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
 
 		particle = particles[ i ];
-		particle.addForce( gravity );
+		particle.addForce( gravity ); // 添加重力
 
 		particle.integrate( TIMESTEP_SQ );
 
